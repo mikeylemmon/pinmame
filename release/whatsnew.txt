@@ -35,7 +35,8 @@ Improved Zaccaria 11178 sound emulation a little (clown, poolcham, bbeltzac, mex
 Fixed Zaccaria strsphnx sound, background music works correctly now
 Found a cleaner way to prevent garbled speech on Zaccaria
 Used YMFM's YM2151 core for a more accurate emulation (GTS3, Older Bally/Williams WPCs, Older Data Easts)
-Improved HC55516 CVSD sound emulation once more (most Williams/Bally machines in the Gorgar up to Twilight Zone range)
+Improved HC555XX CVSD sound emulation once more (most Williams/Bally machines in the Gorgar up to Twilight Zone range)
+Distinguish between HC55516 and newer chip-variants (Sys6/7 now uses the older HC55516 chip)
 Fixed regression in DCS Audio decoding
 Also fixed one subtle DCS emulation bug that leads to slight buzzing/crackling on some samples though (mainly audible when using good speakers or headphones or if the internal volume is cranked up very high)
  one of the longest standing bugs in the history of PinMAME!
