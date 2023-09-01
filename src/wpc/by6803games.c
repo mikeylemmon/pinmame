@@ -277,6 +277,7 @@ CORE_CLONEDEFNV(hvymetag,hvymetal,"Heavy Metal Meltdown (German)",1987,"Bally",b
 INITGAME6803(dungdrag,GEN_BY6803,dispBy104,FLIP_SW(FLIP_L),4,SNDBRD_BYSD, BY6803_DISPALPHA)
 BY6803_ROMSTART44(dungdrag,"cpu_u2.128", CRC(cefd4330) SHA1(0bffb2b73229e9908a018e06daeceb736896e5f0),
                            "cpu_u3.128", CRC(4bacc7f5) SHA1(71dd898924e0e968c4f3ba8a261e6b382d8ae0f1))
+                           // "cpu_u3.128", CRC(0d0712b9) SHA1(6e8b3e18a98fb816333723bcac93bb7e2d77ede5))
 BYSD_SOUNDROM0000(         "snd_u12.512",CRC(dd95f851) SHA1(6fa46b512bced0d1862b2621e195ef0dfd24f928),
                            "snd_u11.512",CRC(dcd461b3) SHA1(834000cfb6c6acf5c296db58971251819971f4de),
                            "snd_u14.512",CRC(dd9e61eb) SHA1(fd1ec58f5708d5abf3d7424954ce054454514283),
@@ -284,6 +285,20 @@ BYSD_SOUNDROM0000(         "snd_u12.512",CRC(dd95f851) SHA1(6fa46b512bced0d1862b
 BY6803_ROMEND
 #define input_ports_dungdrag input_ports_by6803
 CORE_GAMEDEFNV(dungdrag,"Dungeons & Dragons",1987,"Bally",by_mBY6803_SDS,0)
+
+/*------------------------------------
+/ Dungeons & Dragons - Mikey Mod (6803-0H06: 10/87)
+/------------------------------------*/
+INITGAME6803(dungdrag_mm,GEN_BY6803,dispBy104,FLIP_SW(FLIP_L),4,SNDBRD_BYSD, BY6803_DISPALPHA)
+BY6803_ROMSTART44(dungdrag_mm,"cpu_u2.128", CRC(c30338ea) SHA1(ca3b6c88951530a49eb2eab6bc5216715bb33dbb),
+                              "cpu_u3.128", CRC(00f96963) SHA1(95231ef28b677ea199ce457f789adb70576577ee))
+BYSD_SOUNDROM0000(            "snd_u12.512",CRC(dd95f851) SHA1(6fa46b512bced0d1862b2621e195ef0dfd24f928),
+                              "snd_u11.512",CRC(dcd461b3) SHA1(834000cfb6c6acf5c296db58971251819971f4de),
+                              "snd_u14.512",CRC(dd9e61eb) SHA1(fd1ec58f5708d5abf3d7424954ce054454514283),
+                              "snd_u13.512",CRC(1e2d9211) SHA1(f5fcf1c07f01e7f1a7abff9ac3c481b84471d3a6))
+BY6803_ROMEND
+#define input_ports_dungdrag_mm input_ports_by6803
+CORE_GAMEDEFNV(dungdrag_mm,"Dungeons & Dragons (Mikey Mod)",1987,"Bally",by_mBY6803_SDS,0)
 
 // Games below don't use a keypad anymore
 /*------------------------------------------------

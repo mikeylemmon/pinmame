@@ -91,7 +91,7 @@ TODO:
 #include "m6800.h"
 
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 #if VERBOSE
 #define LOG(x)	logerror x
@@ -1305,6 +1305,7 @@ int m6803_execute(int cycles)
 			pPPC = pPC;
 			CALL_MAME_DEBUG;
 			ireg=M_RDOP(PCD);
+			// LOG("PC=0x%x ireg=0x%x\n");
 			PC++;
 
 			switch( ireg )

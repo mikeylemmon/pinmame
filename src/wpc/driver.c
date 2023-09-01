@@ -349,6 +349,7 @@ DRIVERNV(prtyanig)      //          05/87 Party Animal (German)
 DRIVERNV(hvymetal)      //6803-0H03:08/87 Heavy Metal Meltdown
 DRIVERNV(hvymetag)      //          08/87 Heavy Metal Meltdown (German)
 DRIVERNV(dungdrag)      //6803-0H06:10/87 Dungeons & Dragons
+DRIVERNV(dungdrag_mm)   //6803-0H06:10/87 Dungeons & Dragons (Mikey Mod)
 DRIVERNV(esclwrld)      //6803-0H05:12/87 Escape from the Lost World
 DRIVERNV(esclwrlg)      //          12/87 Escape from the Lost World (German)
 DRIVERNV(black100)      //6803-0H07:03/88 Blackwater 100
