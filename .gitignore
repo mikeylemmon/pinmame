@@ -1,3 +1,12 @@
 .project
+.vs/
 build/
 /CMakeLists.txt
+/obj
+/tmp
+/x64
+/*VC2019.vcxproj*
+/InstallVPinMAME_VC2019*
+/PinMAME_VC2019*
+/PinMAME32_VC2019*
+/PinMAME32ui.ini
