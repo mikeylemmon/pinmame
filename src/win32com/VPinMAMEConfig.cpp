@@ -376,6 +376,7 @@ void CLIB_DECL logerror(const char *text,...) {
     char szBuffer[512];
     vsnprintf(szBuffer, sizeof(szBuffer) / sizeof(szBuffer[0]), text, arg);
     OutputDebugString(szBuffer);
+    printf(szBuffer);
     fprintf(logfile, szBuffer);
 	
 	//DAR@20230518 Delay in output was hiding cause of crash, should flush
