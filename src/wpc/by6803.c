@@ -300,7 +300,7 @@ static WRITE_HANDLER(pia1ca2_w) {
 
 /* PIA0:CA2-W Display Blanking/Select */
 static WRITE_HANDLER(pia0ca2_w) {
-  DBGLOG(("PIA0:CA2=%d\n",data));
+  // DBGLOG(("PIA0:CA2=%d\n",data));
   locals.p0_ca2 = data;
   if (!data) locals.DISPSTROBE(0x1f);
 }
@@ -314,12 +314,12 @@ static WRITE_HANDLER(pia1b_w) {
   data ^= 0xf0;
   coreGlobals.pulsedSolState = (coreGlobals.pulsedSolState & 0xfff0ffff) | ((data & 0xf0)<<12);
   locals.solenoids |= (data & 0xf0)<<12;
-  DBGLOG(("PIA1:bw=%d\n",data));
+  // DBGLOG(("PIA1:bw=%d\n",data));
 }
 
 /* PIA1:CB2-W Solenoid Select */
 static WRITE_HANDLER(pia1cb2_w) {
-  DBGLOG(("PIA1:CB2=%d\n",data));
+  // DBGLOG(("PIA1:CB2=%d\n",data));
   locals.p1_cb2 = data;
 }
 

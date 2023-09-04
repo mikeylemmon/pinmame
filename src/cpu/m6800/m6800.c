@@ -532,7 +532,7 @@ INLINE void WM16( UINT32 Addr, PAIR *p )
 /* IRQ enter */
 static void ENTER_INTERRUPT(const char *message,UINT16 irq_vector)
 {
-	LOG((message, cpu_getactivecpu()));
+	// LOG((message, cpu_getactivecpu()));
 	if( m6800.wai_state & (M6800_WAI|M6800_SLP) )
 	{
 		if( m6800.wai_state & M6800_WAI )
@@ -741,7 +741,7 @@ void m6800_set_irq_line(int irqline, int state)
 	if (irqline == IRQ_LINE_NMI)
 	{
 		if (m6800.nmi_state == state) return;
-		LOG(("M6800#%d set_nmi_line %d \n", cpu_getactivecpu(), state));
+		// LOG(("M6800#%d set_nmi_line %d \n", cpu_getactivecpu(), state));
 		m6800.nmi_state = state;
 		if (state == CLEAR_LINE) return;
 
@@ -753,7 +753,7 @@ void m6800_set_irq_line(int irqline, int state)
 		//int eddge; //!! never used
 
 		if (m6800.irq_state[irqline] == state) return;
-		LOG(("M6800#%d set_irq_line %d,%d\n", cpu_getactivecpu(), irqline, state));
+		// LOG(("M6800#%d set_irq_line %d,%d\n", cpu_getactivecpu(), irqline, state));
 		m6800.irq_state[irqline] = state;
 
 		switch(irqline)
@@ -2478,10 +2478,10 @@ READ_HANDLER( m6803_internal_registers_r )
 		case 0x11:
 		case 0x12:
 		case 0x13:
-			LOG(("CPU #%d PC %04x: warning - read from unsupported internal register %02x\n",cpu_getactivecpu(),activecpu_get_pc(),offset));
+			// LOG(("CPU #%d PC %04x: warning - read from unsupported internal register %02x\n",cpu_getactivecpu(),activecpu_get_pc(),offset));
 			return 0;
 		case 0x14:
-			LOG(("CPU #%d PC %04x: read RAM control register\n",cpu_getactivecpu(),activecpu_get_pc()));
+			// LOG(("CPU #%d PC %04x: read RAM control register\n",cpu_getactivecpu(),activecpu_get_pc()));
 			return m6800.ram_ctrl;
 		case 0x15:
 		case 0x16:
@@ -2495,7 +2495,7 @@ READ_HANDLER( m6803_internal_registers_r )
 		case 0x1e:
 		case 0x1f:
 		default:
-			LOG(("CPU #%d PC %04x: warning - read from reserved internal register %02x\n",cpu_getactivecpu(),activecpu_get_pc(),offset));
+			// LOG(("CPU #%d PC %04x: warning - read from reserved internal register %02x\n",cpu_getactivecpu(),activecpu_get_pc(),offset));
 			return 0;
 	}
 }

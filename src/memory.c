@@ -2618,19 +2618,19 @@ int port_address_bits_of_cpu(int cputype)
 
 static READ_HANDLER( mrh8_bad )
 {
-	logerror("cpu #%d (PC=%08X): unmapped memory byte read from %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset);
+	// logerror("cpu #%d (PC=%08X): unmapped memory byte read from %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset);
 	if (activecpu_address_bits() <= SPARSE_THRESH && unmap_value == 0) return cpu_bankbase[STATIC_RAM][offset];
 	return unmap_value;
 }
 static READ16_HANDLER( mrh16_bad )
 {
-	logerror("cpu #%d (PC=%08X): unmapped memory word read from %08X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*2, mem_mask ^ 0xffff);
+	// logerror("cpu #%d (PC=%08X): unmapped memory word read from %08X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*2, mem_mask ^ 0xffff);
 	if (activecpu_address_bits() <= SPARSE_THRESH && unmap_value == 0) return ((data16_t *)cpu_bankbase[STATIC_RAM])[offset];
 	return unmap_value;
 }
 static READ32_HANDLER( mrh32_bad )
 {
-	logerror("cpu #%d (PC=%08X): unmapped memory dword read from %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*4, mem_mask ^ 0xffffffff);
+	// logerror("cpu #%d (PC=%08X): unmapped memory dword read from %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*4, mem_mask ^ 0xffffffff);
 	if (activecpu_address_bits() <= SPARSE_THRESH && unmap_value == 0) return ((data32_t *)cpu_bankbase[STATIC_RAM])[offset];
 	return unmap_value;
 }
@@ -2653,17 +2653,17 @@ static WRITE32_HANDLER( mwh32_bad )
 
 static READ_HANDLER( prh8_bad )
 {
-	logerror("cpu #%d (PC=%08X): unmapped port byte read from %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset);
+	// logerror("cpu #%d (PC=%08X): unmapped port byte read from %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset);
 	return unmap_value;
 }
 static READ16_HANDLER( prh16_bad )
 {
-	logerror("cpu #%d (PC=%08X): unmapped port word read from %08X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*2, mem_mask ^ 0xffff);
+	// logerror("cpu #%d (PC=%08X): unmapped port word read from %08X & %04X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*2, mem_mask ^ 0xffff);
 	return unmap_value;
 }
 static READ32_HANDLER( prh32_bad )
 {
-	logerror("cpu #%d (PC=%08X): unmapped port dword read from %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*4, mem_mask ^ 0xffffffff);
+	// logerror("cpu #%d (PC=%08X): unmapped port dword read from %08X & %08X\n", cpu_getactivecpu(), activecpu_get_pc(), offset*4, mem_mask ^ 0xffffffff);
 	return unmap_value;
 }
 

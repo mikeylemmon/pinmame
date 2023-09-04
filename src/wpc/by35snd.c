@@ -351,7 +351,7 @@ static WRITE_HANDLER(sp_pia0b_w) {
   if (splocals.pia0b & 0x02) AY8910Write(0, splocals.pia0b ^ 0x01, splocals.pia0a);
 }
 static WRITE_HANDLER(sp_pia0cb2_w) {
-  logerror("Mute sound: %d\n", data);
+  // logerror("Mute sound: %d\n", data);
   // spaceinv seems to use this feature at game start time but not anymore afterwards!?
   mixer_set_volume(0, data ? 75 : 100);
 }
@@ -914,7 +914,7 @@ static void sd_init(struct sndbrdData *brdData) {
 static WRITE_HANDLER(sd_pia0cb2_w) {
   if (!data) {
     sdlocals.ledcount++;
-    logerror("SD LED: %d\n", sdlocals.ledcount);
+    // logerror("SD LED: %d\n", sdlocals.ledcount);
     if (core_gameData->hw.gameSpecific1) { // hack for Blackwater 100 (main CPU boots up too fast)
       if (sdlocals.ledcount == 5) // suspend main cpu, soundboard not ready yet
         cpu_set_halt_line(0, 1);
@@ -934,11 +934,11 @@ static WRITE_HANDLER(sd_man_w) {
   sd_cmd_w(0, data >> 4);
 }
 static WRITE_HANDLER(sd_cmd_w) {
-  logerror("SD cmd: %02x\n", data);
+  // logerror("SD cmd: %02x\n", data);
   sdlocals.latch = data;
 }
 static WRITE_HANDLER(sd_ctrl_w) {
-  logerror("SD ctrl:%d\n", data);
+  // logerror("SD ctrl:%d\n", data);
   if (!(data & 0x01)) sdlocals.cmd = sdlocals.latch;
   pia_set_input_ca1(SD_PIA0, data & 0x01);
 }
@@ -946,7 +946,7 @@ static READ_HANDLER(sd_status_r) { return sdlocals.status; }
 
 static READ_HANDLER(sd_pia0b_r) {
   UINT8 val = 0x30 | (sdlocals.cmd & 0x0f);
-  logerror("SD read:%02x\n", val);
+  // logerror("SD read:%02x\n", val);
   sdlocals.cmd >>= 4;
   return val;
 }

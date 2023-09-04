@@ -113,7 +113,7 @@ DWORD FAR PASCAL CController::RunController(CController* pController)
 	// set some options for the mamew environment
 	// set_option("window", "1", 0);
 	set_option("resolution", "1x1x16", 0);
-	set_option("debug_resolution", "640x480x16", 0);
+	set_option("debug_resolution", "640x800x8", 0); // prev "640x480x16"
 	set_option("maximize", "0", 0);
 	set_option("throttle", "1", 0);
 	set_option("sleep", "1", 0);
@@ -121,6 +121,64 @@ DWORD FAR PASCAL CController::RunController(CController* pController)
 	set_option("skip_gameinfo", "1", 0);
 	set_option("skip_disclaimer", "1", 0);
 	set_option("keepaspect", "0", 0);
+
+	// DND_MM debug options
+	set_option("log", "1", 0);
+	set_option("debug", "1", 0);
+
+	// char* recordname = "rec-test-01.inp";
+	// char* playbackname = NULL;
+	//
+	// char* recordname = NULL;
+	// char* playbackname = "rec-test-01.inp";
+	//
+	char* playbackname = NULL;
+	char* recordname = NULL;
+
+	// TODO: ?? Merge with config.c #L546 ??
+	/* handle playback */
+	if (playbackname)
+	{
+		options.playback = mame_fopen(playbackname,0,FILETYPE_INPUTLOG,0);
+		if (!options.playback)
+		{
+			fprintf(stderr, "failed to open %s for playback\n", playbackname);
+			exit(1);
+		}
+	}
+
+	/* handle record option */
+	if (recordname)
+	{
+		options.record = mame_fopen(recordname,0,FILETYPE_INPUTLOG,1);
+		if (!options.record)
+		{
+			fprintf(stderr, "failed to open %s for recording\n", recordname);
+			exit(1);
+		}
+	}
+
+	if (options.record)
+	{
+		INP_HEADER inp_header;
+		memset(&inp_header, '\0', sizeof(INP_HEADER));
+		#ifndef __MINGW32__
+		strcpy_s(inp_header.name, sizeof(inp_header.name), drivers[pController->m_nGameNo]->name);
+		#else
+		strcpy(inp_header.name, drivers[game_index]->name);
+		#endif
+		/* MAME32 stores the MAME version numbers at bytes 9 - 11
+		* MAME DOS keeps this information in a string, the
+		* Windows code defines them in the Makefile.
+		*/
+		/*
+		inp_header.version[0] = 0;
+		inp_header.version[1] = VERSION;
+		inp_header.version[2] = BETA_VERSION;
+		*/
+		mame_fwrite(options.record, &inp_header, sizeof(INP_HEADER));
+	}
+	// End DND_MM hacks
 
 	VARIANT fHasSound;
 	VariantInit(&fHasSound);
@@ -172,6 +230,12 @@ DWORD FAR PASCAL CController::RunController(CController* pController)
 #endif
 
 	vpm_game_init(pController->m_nGameNo);
+
+	if (options.mame_debug) {
+		logerror("[CController.RunController] Debugger is enabled\n");
+	}
+	logerror("[CController.RunController] Game intialized, running now...\n");
+
 	run_game(pController->m_nGameNo);
 	vpm_game_exit(pController->m_nGameNo);
 
