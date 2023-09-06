@@ -275,6 +275,8 @@ static void trace_done( void );
 static void trace_select( void );
 static void trace_output( void );
 
+static void debug2_update(void);
+
 static int hit_brk_exec( void );
 static int hit_brk_data( void );
 static int hit_brk_regs( void );
@@ -1506,6 +1508,39 @@ static void trace_select( void )
 	}
 	if( active_cpu < total_cpu )
 		tracecpu = active_cpu;
+}
+
+// static unsigned xx_last = -1;
+// static unsigned yy_last = -1;
+
+static void debug2_update(void)
+{
+	unsigned pc = activecpu_get_pc();
+	unsigned yy = pc >> 6;
+	unsigned xx = pc & 0b111111;
+	// unsigned yy = pc >> 8;
+	// unsigned xx = pc & 0xff;
+
+	// if (xx != xx_last || yy != yy_last) {
+	// 	printf("%x -> %x, %x (%d, %d)\n", pc, xx, yy, xx, yy);
+	// }
+	// xx_last = xx;
+	// yy_last = yy;
+
+	struct mame_bitmap *bb = Machine->debug_bitmap2;
+	if (bb->depth == 32) {
+		UINT32* ll = (UINT32*)bb->line[yy];
+		ll[xx]++;
+	}
+	else if (bb->depth == 16) {
+		UINT16* ll = (UINT16*)bb->line[yy];
+		ll[xx]++;
+	}
+	else {
+		UINT8* ll = (UINT8*)bb->line[yy];
+		ll[xx]++;
+	}
+	debugger_bitmap_changed = 1;
 }
 
 /**************************************************************************
@@ -5321,6 +5356,12 @@ void mame_debug_init(void)
 	debug_key_pressed = 1;
 
 	first_time = 1;
+
+	dbg[1].ignore = 1;
+
+	// for (unsigned pretend = 0; pretend < 0xffff; pretend++) {
+	// 	debug2_update(1, pretend);
+	// }
 }
 
 /**************************************************************************
@@ -5371,6 +5412,8 @@ void MAME_Debug(void)
 		trace_select();
 		trace_output();
 	}
+
+	debug2_update();
 
 #ifdef PINMAME
 /* CODELIST */

@@ -122,6 +122,7 @@ float win_screen_aspect = (4.0f / 3.0f);
 // windows
 HWND win_video_window;
 HWND win_debug_window;
+HWND win_debug_window2;
 
 // video bounds
 double win_aspect_ratio_adjust = 1.0;
@@ -165,6 +166,8 @@ static UINT8 video_dib_info_data[sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD)];
 static BITMAPINFO *video_dib_info = (BITMAPINFO *)video_dib_info_data;
 static UINT8 debug_dib_info_data[sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD)];
 static BITMAPINFO *debug_dib_info = (BITMAPINFO *)debug_dib_info_data;
+static UINT8 debug_dib_info_data2[sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD)];
+static BITMAPINFO *debug_dib_info2 = (BITMAPINFO *)debug_dib_info_data2;
 static UINT8 *converted_bitmap = NULL;
 
 // video bounds
@@ -220,7 +223,9 @@ static void dib_draw_window(HDC dc, struct mame_bitmap *bitmap, const struct rec
 
 static int create_debug_window(void);
 static void draw_debug_contents(HDC dc, struct mame_bitmap *bitmap, const rgb_t *palette);
+static void draw_debug_contents2(HDC dc, struct mame_bitmap *bitmap, const rgb_t *palette);
 static LRESULT CALLBACK debug_window_proc(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam);
+static LRESULT CALLBACK debug_window_proc2(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam);
 
 
 
@@ -497,6 +502,11 @@ int win_init_window(void)
 			// register the class; fail if we can't
 			if (!RegisterClass(&wc))
 				return 1;
+
+			wc.lpszClassName 	= TEXT("MAMEDebug+");
+			wc.lpfnWndProc		= debug_window_proc2;
+			if (!RegisterClass(&wc))
+				return 1;
 		}
 		#ifdef VPINMAME
 		classes_created = 1;
@@ -606,6 +616,7 @@ int win_create_window(int width, int height, int depth, int attributes, double a
 
 	// copy that same data into the debug DIB info
 	memcpy(debug_dib_info_data, video_dib_info_data, sizeof(debug_dib_info_data));
+	memcpy(debug_dib_info_data2, video_dib_info_data, sizeof(debug_dib_info_data2));
 
 	// Determine which DirectX components to use
 #ifndef DISABLE_DX7
@@ -1361,6 +1372,8 @@ void win_toggle_full_screen(void)
 	ShowWindow(win_video_window, SW_HIDE);
 	if (win_window_mode && win_debug_window)
 		ShowWindow(win_debug_window, SW_HIDE);
+	if (win_window_mode && win_debug_window2)
+		ShowWindow(win_debug_window2, SW_HIDE);
 
 	// toggle the window mode
 	win_window_mode = !win_window_mode;
@@ -1419,6 +1432,8 @@ void win_toggle_full_screen(void)
 	ShowWindow(win_video_window, SW_SHOW);
 	if (win_window_mode && win_debug_window)
 		ShowWindow(win_debug_window, SW_SHOW);
+	if (win_window_mode && win_debug_window2)
+		ShowWindow(win_debug_window2, SW_SHOW);
 
 	// reinit
 #ifndef DISABLE_DX7
@@ -1849,6 +1864,23 @@ static int create_debug_window(void)
 			win_video_window, NULL, GetModuleHandle(NULL), NULL);
 	if (!win_debug_window)
 		return 1;
+
+	sprintf(title, "Debug+: %s [%s]", Machine->gamedrv->description, Machine->gamedrv->name);
+	bounds.top = 0;
+	bounds.left = 100;
+	bounds.right = options.debug_width + bounds.left;
+	// bounds.bottom = options.debug_height;
+	bounds.bottom = 1024;
+	AdjustWindowRectEx(&bounds, WINDOW_STYLE, FALSE, WINDOW_STYLE_EX);
+	SystemParametersInfo(SPI_GETWORKAREA, 0, &work_bounds, 0);
+
+	win_debug_window2 = CreateWindowEx(DEBUG_WINDOW_STYLE_EX, TEXT("MAMEDebug+"), title, DEBUG_WINDOW_STYLE,
+			work_bounds.right - (bounds.right - bounds.left),
+			work_bounds.bottom - (bounds.bottom - bounds.top),
+			bounds.right - bounds.left, bounds.bottom - bounds.top,
+			win_video_window, NULL, GetModuleHandle(NULL), NULL);
+	if (!win_debug_window2)
+		return 1;
 #endif
 
 	return 0;
@@ -1867,11 +1899,24 @@ void win_update_debug_window(struct mame_bitmap *bitmap, const rgb_t *palette)
 	if (win_debug_window)
 	{
 		HDC dc = GetDC(win_debug_window);
-		draw_debug_contents(dc, bitmap, palette);
+		draw_debug_contents2(dc, bitmap, palette);
 		ReleaseDC(win_debug_window, dc);
 	}
 #endif
 }
+void win_update_debug_window2(struct mame_bitmap *bitmap, const rgb_t *palette)
+{
+#ifdef MAME_DEBUG
+	// get the client DC and draw to it
+	if (win_debug_window2)
+	{
+		HDC dc = GetDC(win_debug_window2);
+		draw_debug_contents2(dc, bitmap, palette);
+		ReleaseDC(win_debug_window2, dc);
+	}
+#endif
+}
+
 
 
 
@@ -1935,6 +1980,66 @@ static void draw_debug_contents(HDC dc, struct mame_bitmap *bitmap, const rgb_t 
 			bitmap->base, debug_dib_info, DIB_RGB_COLORS, SRCCOPY);
 }
 
+//============================================================
+//	draw_debug_contents2
+//============================================================
+
+static void draw_debug_contents2(HDC dc, struct mame_bitmap *bitmap, const rgb_t *palette)
+{
+#ifndef PINMAME
+	static struct mame_bitmap *last_bitmap;
+#endif
+	static const rgb_t *last_palette;
+	int i;
+
+#ifdef PINMAME
+	struct mame_bitmap *last_bitmap;
+	last_bitmap = last_debug_bitmap;
+#endif
+
+	// if no bitmap, use the last one we got
+	if (bitmap == NULL)
+		bitmap = last_bitmap;
+	if (palette == NULL)
+		palette = last_palette;
+
+	// if no bitmap, just fill
+	if (bitmap == NULL || palette == NULL || !debug_focus || bitmap->depth != 8)
+	{
+		RECT fill;
+		GetClientRect(win_debug_window2, &fill);
+		FillRect(dc, &fill, (HBRUSH)GetStockObject(BLACK_BRUSH));
+		return;
+	}
+	last_bitmap = bitmap;
+	last_palette = palette;
+
+	// if we're iconic, don't bother
+	if (IsIconic(win_debug_window2))
+		return;
+
+	// for 8bpp bitmaps, update the debug colors
+	for (i = 0; i < DEBUGGER_TOTAL_COLORS; i++)
+	{
+		// Note that GCC may throw an array-bounds error on these lines, since the
+		// BITMAPINFO structure defines bmiColors as a single-element array.  Its
+		// size actually varies depending on settings in the header.
+		debug_dib_info2->bmiColors[i].rgbRed		= RGB_RED(palette[i]);
+		debug_dib_info2->bmiColors[i].rgbGreen	= RGB_GREEN(palette[i]);
+		debug_dib_info2->bmiColors[i].rgbBlue	= RGB_BLUE(palette[i]);
+	}
+
+	// fill in bitmap-specific info
+	debug_dib_info2->bmiHeader.biWidth = (LONG)(((UINT8 *)bitmap->line[1]) - ((UINT8 *)bitmap->line[0])) / (bitmap->depth / 8);
+	debug_dib_info2->bmiHeader.biHeight = -bitmap->height;
+	debug_dib_info2->bmiHeader.biBitCount = bitmap->depth;
+
+	// blit to the screen
+	StretchDIBits(dc, 0, 0, bitmap->width, bitmap->height,
+			0, 0, bitmap->width, bitmap->height,
+			bitmap->base, debug_dib_info2, DIB_RGB_COLORS, SRCCOPY);
+}
+
 
 
 //============================================================
@@ -1984,6 +2089,53 @@ static LRESULT CALLBACK debug_window_proc(HWND wnd, UINT message, WPARAM wparam,
 
 	return 0;
 }
+//============================================================
+//	debug_window_proc2
+//============================================================
+
+static LRESULT CALLBACK debug_window_proc2(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam)
+{
+	// handle a few messages
+	switch (message)
+	{
+		// paint: redraw the last bitmap
+		case WM_PAINT:
+		{
+			PAINTSTRUCT pstruct;
+			HDC hdc = BeginPaint(wnd, &pstruct);
+			draw_debug_contents2(hdc, NULL, NULL);
+			EndPaint(wnd, &pstruct);
+			break;
+		}
+
+		// get min/max info: set the minimum window size
+		case WM_GETMINMAXINFO:
+		{
+			MINMAXINFO *minmax = (MINMAXINFO *)lparam;
+			minmax->ptMinTrackSize.x = 640;
+			minmax->ptMinTrackSize.y = 480;
+			break;
+		}
+
+		// sizing: constrain to the aspect ratio unless control key is held down
+		case WM_SIZING:
+		{
+			InvalidateRect(win_debug_window2, NULL, FALSE);
+			break;
+		}
+
+		// destroy: close down the app
+		case WM_DESTROY:
+			win_debug_window2 = 0;
+			break;
+
+		// everything else: defaults
+		default:
+			return DefWindowProc(wnd, message, wparam, lparam);
+	}
+
+	return 0;
+}
 
 
 
@@ -2021,8 +2173,16 @@ void win_set_debugger_focus(int focus)
 		// make frontmost
 		SetForegroundWindow(win_debug_window);
 
+		if (win_debug_window2)
+		{
+			ShowWindow(win_debug_window2, SW_SHOW);
+			ShowWindow(win_debug_window2, SW_RESTORE);
+			SetForegroundWindow(win_debug_window2);
+		}
+
 		// force an update
 		win_update_debug_window(NULL, NULL);
+		win_update_debug_window2(NULL, NULL);
 	}
 
 	// if not focuessed, bring the game frontmost
@@ -2035,6 +2195,10 @@ void win_set_debugger_focus(int focus)
 
 		// hide the window
 		ShowWindow(win_debug_window, SW_HIDE);
+		if (win_debug_window2)
+		{
+			ShowWindow(win_debug_window2, SW_HIDE);
+		}
 
 		// make video frontmost
 		SetForegroundWindow(win_video_window);

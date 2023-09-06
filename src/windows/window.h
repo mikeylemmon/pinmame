@@ -139,6 +139,7 @@ void win_wait_for_vsync(void);
 
 void win_update_video_window(struct mame_bitmap *bitmap, const struct rectangle *bounds, void *vector_dirty_pixels);
 void win_update_debug_window(struct mame_bitmap *bitmap, const rgb_t *palette);
+void win_update_debug_window2(struct mame_bitmap *bitmap, const rgb_t *palette);
 
 void win_set_palette_entry(int _index, UINT8 red, UINT8 green, UINT8 blue);
 

@@ -1092,6 +1092,7 @@ void osd_update_video_and_audio(struct mame_display *display)
 	if (display->changed_flags & DEBUG_BITMAP_CHANGED)
 	{
 		win_update_debug_window(display->debug_bitmap, display->debug_palette);
+		win_update_debug_window2(display->debug_bitmap2, display->debug_palette);
 		debugger_was_visible = 1;
 	}
 

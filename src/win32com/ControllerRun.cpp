@@ -113,7 +113,7 @@ DWORD FAR PASCAL CController::RunController(CController* pController)
 	// set some options for the mamew environment
 	// set_option("window", "1", 0);
 	set_option("resolution", "1x1x16", 0);
-	set_option("debug_resolution", "640x800x8", 0); // prev "640x480x16"
+	set_option("debug_resolution", "640x800x16", 0); // prev "640x480x16"
 	set_option("maximize", "0", 0);
 	set_option("throttle", "1", 0);
 	set_option("sleep", "1", 0);

@@ -150,6 +150,7 @@ struct RunningMachine
 
 	/* bitmap where the debugger is rendered */
 	struct mame_bitmap *	debug_bitmap;
+	struct mame_bitmap *	debug_bitmap2;
 
 	/* pen array for the debugger, analagous to the pens above */
 	pen_t *					debug_pens;
@@ -287,6 +288,7 @@ struct mame_display
 
     /* debugger bitmap and display information */
     struct mame_bitmap *	debug_bitmap;			/* points to debugger's bitmap */
+    struct mame_bitmap *	debug_bitmap2;			/* points to debugger's second bitmap */
     const rgb_t *			debug_palette;			/* points to debugger's palette */
     UINT32					debug_palette_entries;	/* number of palette entries in debugger's palette */
     UINT8					debug_focus;			/* set to 1 if debugger has focus */

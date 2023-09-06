@@ -786,6 +786,12 @@ static int vh_open(void)
 		if (!Machine->debug_bitmap)
 			goto cant_create_debug_bitmap;
 
+		// Machine->debug_bitmap2 = auto_bitmap_alloc_depth(options.debug_width, options.debug_height, depth);
+		// Machine->debug_bitmap2 = auto_bitmap_alloc_depth(options.debug_width, 1024, 16);
+		Machine->debug_bitmap2 = auto_bitmap_alloc_depth(options.debug_width, 1024, depth);
+		if (!Machine->debug_bitmap2)
+			goto cant_create_debug_bitmap;
+
 		/* then create the debugger font */
 		Machine->debugger_font = build_debugger_font();
 		if (Machine->debugger_font == NULL)
@@ -1260,6 +1266,7 @@ void update_video_and_audio(void)
 #ifdef MAME_DEBUG
 	/* set the debugger bitmap */
 	current_display.debug_bitmap = Machine->debug_bitmap;
+	current_display.debug_bitmap2 = Machine->debug_bitmap2;
 	if (debugger_bitmap_changed)
 		current_display.changed_flags |= DEBUG_BITMAP_CHANGED;
 	debugger_bitmap_changed = 0;
