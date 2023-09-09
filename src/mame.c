@@ -786,9 +786,8 @@ static int vh_open(void)
 		if (!Machine->debug_bitmap)
 			goto cant_create_debug_bitmap;
 
-		// Machine->debug_bitmap2 = auto_bitmap_alloc_depth(options.debug_width, options.debug_height, depth);
+		Machine->debug_bitmap2 = auto_bitmap_alloc_depth(options.debug_width, 1024, 32);
 		// Machine->debug_bitmap2 = auto_bitmap_alloc_depth(options.debug_width, 1024, 16);
-		Machine->debug_bitmap2 = auto_bitmap_alloc_depth(options.debug_width, 1024, depth);
 		if (!Machine->debug_bitmap2)
 			goto cant_create_debug_bitmap;
 

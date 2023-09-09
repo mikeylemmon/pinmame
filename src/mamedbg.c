@@ -1510,14 +1510,111 @@ static void trace_select( void )
 		tracecpu = active_cpu;
 }
 
-// static unsigned xx_last = -1;
-// static unsigned yy_last = -1;
+typedef struct {
+	UINT32 pc[0x8000];
+	UINT32 pc_max;
+} s_debug2;
+
+s_debug2 d2_data_bytes;
+s_debug2* d2_data = &d2_data_bytes;
+
+void d2_draw(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
+	struct mame_bitmap *bm = Machine->debug_bitmap2;
+	UINT32* ll = (UINT32*)bm->line[yy];
+	ll[xx] = (rr << 16) + (gg << 8) + bb;
+}
+
+void d2_draw_x2(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
+	struct mame_bitmap *bm = Machine->debug_bitmap2;
+	UINT32* ll = (UINT32*)bm->line[yy*2];
+	UINT32 vv = (rr << 16) + (gg << 8) + bb;
+	ll[xx*2] = vv;
+	ll[xx*2+1] = vv;
+	ll = (UINT32*)bm->line[yy*2+1];
+	ll[xx*2] = vv;
+	ll[xx*2+1] = vv;
+}
+
+void d2_draw_pc(unsigned pc, UINT8 active) {
+	unsigned pp = pc - 0x8000;
+	unsigned xx = pp & 0b111111;
+	unsigned yy = pp >> 6;
+	if (active) {
+		d2_draw_x2(xx, yy, 0x20, 0xff, 0xa0);
+		return;
+	}
+	UINT32 count = d2_data->pc[pp];
+	if (!count) {
+		d2_draw_x2(xx, yy, 0x10, 0x10, 0x10);
+	} else if (count < 7) {
+		UINT8 rr = (count & 0b100) ? 0x60 : 0;
+		UINT8 gg = (count & 0b010) ? 0x60 : 0;
+		UINT8 bb = (count & 0b001) ? 0x60 : 0;
+		d2_draw_x2(xx, yy, rr, gg, bb);
+	} else if (count < 0xfff) {
+		d2_draw_x2(xx, yy, 0, 0x90, count >> 4);
+	} else {
+		UINT8 val = (UINT8)((count * 0xff / d2_data->pc_max) & 0xff);
+		d2_draw_x2(xx, yy, 0xa0, val, val);
+	}
+}
+
+void d2_draw_pc_all(void) {
+	for (unsigned pc = 0x8000; pc <= 0xffff; ++pc) {
+		d2_draw_pc(pc, 0);
+	}
+}
 
 static void debug2_update(void)
 {
+	struct mame_bitmap *bm = Machine->debug_bitmap2;
+
+	static int d2_first = 1;
+	if (d2_first) {
+		d2_first = 0;
+		d2_data->pc_max = 0xffff;
+		memset(d2_data->pc, 0, 0x8000);
+		d2_draw_pc_all();
+	}
+
 	unsigned pc = activecpu_get_pc();
-	unsigned yy = pc >> 6;
-	unsigned xx = pc & 0b111111;
+	static unsigned lpc = 0x8000;
+	if (pc < 0x8000) {
+		return;
+	}
+	d2_data->pc[pc-0x8000] += 1;
+	UINT32 vv = d2_data->pc[pc-0x8000];
+	if (vv > d2_data->pc_max) {
+		d2_data->pc_max = vv + 0xffff;
+		printf("New max: %x -> %x\n", pc, d2_data->pc_max);
+		d2_draw_pc_all();
+	} else {
+		d2_draw_pc(lpc, 0);
+	}
+	d2_draw_pc(pc, 1);
+
+	lpc = pc;
+	debugger_bitmap_changed = 1;
+
+	// static int d2_first2 = 1;
+	// if (d2_first2) {
+	// 	d2_first2 = 0;
+	// 	UINT32 ii = 0;
+	// 	UINT32 size = bm->height * bm->width;
+	// 	for (unsigned kk = 0; kk < bm->height; ++kk) {
+	// 		for (unsigned jj = 0; jj < bm->width; ++jj) {
+	// 			UINT8 ss = (UINT8)((jj * 256 / bm->width) & 0xff);
+	// 			UINT8 tt = (UINT8)((kk * 256 / bm->height) & 0xff);
+	// 			// UINT8 zz = (UINT8)(ii >> 11);
+	// 			UINT8 zz = 0;
+	// 			d2_draw(jj, kk, ss, tt, zz);
+	// 		}
+	// 	}
+	// }
+
+	// unsigned yy = pc >> 6;
+	// unsigned xx = pc & 0b111111;
+
 	// unsigned yy = pc >> 8;
 	// unsigned xx = pc & 0xff;
 
@@ -1527,20 +1624,25 @@ static void debug2_update(void)
 	// xx_last = xx;
 	// yy_last = yy;
 
-	struct mame_bitmap *bb = Machine->debug_bitmap2;
-	if (bb->depth == 32) {
-		UINT32* ll = (UINT32*)bb->line[yy];
-		ll[xx]++;
-	}
-	else if (bb->depth == 16) {
-		UINT16* ll = (UINT16*)bb->line[yy];
-		ll[xx]++;
-	}
-	else {
-		UINT8* ll = (UINT8*)bb->line[yy];
-		ll[xx]++;
-	}
-	debugger_bitmap_changed = 1;
+
+	// if (bm->depth == 32) {
+	// 	UINT32* ll = (UINT32*)bm->line[yy];
+	// 	if (!ll[xx]) {
+	// 		ll[xx] = 0xff0000;
+	// 	}
+	// 	else {
+	// 		ll[xx] += 1;
+	// 	}
+	// }
+	// else if (bm->depth == 16) {
+	// 	UINT16* ll = (UINT16*)bm->line[yy];
+	// 	ll[xx]++;
+	// }
+	// else {
+	// 	UINT8* ll = (UINT8*)bm->line[yy];
+	// 	ll[xx]++;
+	// }
+	// debugger_bitmap_changed = 1;
 }
 
 /**************************************************************************

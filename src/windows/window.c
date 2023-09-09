@@ -7,6 +7,7 @@
 // standard windows headers
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <vfw.h>
 
 // missing stuff from the mingw headers
 #ifndef ENUM_CURRENT_SETTINGS
@@ -123,6 +124,7 @@ float win_screen_aspect = (4.0f / 3.0f);
 HWND win_video_window;
 HWND win_debug_window;
 HWND win_debug_window2;
+HDRAWDIB hdd2;
 
 // video bounds
 double win_aspect_ratio_adjust = 1.0;
@@ -166,6 +168,7 @@ static UINT8 video_dib_info_data[sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD)];
 static BITMAPINFO *video_dib_info = (BITMAPINFO *)video_dib_info_data;
 static UINT8 debug_dib_info_data[sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD)];
 static BITMAPINFO *debug_dib_info = (BITMAPINFO *)debug_dib_info_data;
+// static UINT8 debug_dib_info_data2[sizeof(BITMAPINFO) + 1 * sizeof(RGBQUAD)];
 static UINT8 debug_dib_info_data2[sizeof(BITMAPINFO) + 256 * sizeof(RGBQUAD)];
 static BITMAPINFO *debug_dib_info2 = (BITMAPINFO *)debug_dib_info_data2;
 static UINT8 *converted_bitmap = NULL;
@@ -554,6 +557,7 @@ int win_init_window(void)
 
 static struct mame_bitmap *last_video_bitmap = NULL;
 static struct mame_bitmap *last_debug_bitmap = NULL;
+static struct mame_bitmap *last_debug_bitmap2 = NULL;
 #endif
 
 //============================================================
@@ -605,6 +609,8 @@ int win_create_window(int width, int height, int depth, int attributes, double a
 	video_dib_info->bmiHeader.biClrUsed			= 0;
 	video_dib_info->bmiHeader.biClrImportant	= 0;
 
+	memcpy(debug_dib_info_data2, video_dib_info_data, sizeof(debug_dib_info_data2));
+
 	// initialize the palette to a gray ramp
 	for (i = 0; i < 255; i++)
 	{
@@ -616,7 +622,24 @@ int win_create_window(int width, int height, int depth, int attributes, double a
 
 	// copy that same data into the debug DIB info
 	memcpy(debug_dib_info_data, video_dib_info_data, sizeof(debug_dib_info_data));
-	memcpy(debug_dib_info_data2, video_dib_info_data, sizeof(debug_dib_info_data2));
+
+	// // fill in the bitmap info header for debug2
+	debug_dib_info2->bmiHeader.biSize			= sizeof(debug_dib_info2->bmiHeader);
+	// debug_dib_info2->bmiHeader.biSize			= sizeof(BITMAPINFOHEADER);
+	// debug_dib_info2->bmiHeader.biPlanes			= 1;
+	debug_dib_info2->bmiHeader.biBitCount		= 32;
+	// debug_dib_info2->bmiHeader.biBitCount		= 16;
+	// debug_dib_info2->bmiHeader.biCompression	= BI_BITFIELDS;
+	// debug_dib_info2->bmiHeader.biSizeImage		= 0;
+	// debug_dib_info2->bmiHeader.biXPelsPerMeter	= 0;
+	// debug_dib_info2->bmiHeader.biYPelsPerMeter	= 0;
+	// debug_dib_info2->bmiHeader.biClrUsed		= 0;
+	// debug_dib_info2->bmiHeader.biClrImportant	= 0;
+	// debug_dib_info2->bmiColors[0].rgbRed        = 0xff0000;
+	// debug_dib_info2->bmiColors[0].rgbGreen      = 0x000000;
+	// debug_dib_info2->bmiColors[0].rgbBlue       = 0x0000ff;
+	// debug_dib_info2->bmiColors[0].rgbReserved   = 0xff000000;
+	
 
 	// Determine which DirectX components to use
 #ifndef DISABLE_DX7
@@ -1881,6 +1904,7 @@ static int create_debug_window(void)
 			win_video_window, NULL, GetModuleHandle(NULL), NULL);
 	if (!win_debug_window2)
 		return 1;
+	// hdd2 = DrawDibOpen();
 #endif
 
 	return 0;
@@ -1899,7 +1923,7 @@ void win_update_debug_window(struct mame_bitmap *bitmap, const rgb_t *palette)
 	if (win_debug_window)
 	{
 		HDC dc = GetDC(win_debug_window);
-		draw_debug_contents2(dc, bitmap, palette);
+		draw_debug_contents(dc, bitmap, palette);
 		ReleaseDC(win_debug_window, dc);
 	}
 #endif
@@ -1987,36 +2011,45 @@ static void draw_debug_contents(HDC dc, struct mame_bitmap *bitmap, const rgb_t 
 static void draw_debug_contents2(HDC dc, struct mame_bitmap *bitmap, const rgb_t *palette)
 {
 #ifndef PINMAME
-	static struct mame_bitmap *last_bitmap;
+	static struct mame_bitmap *last_bitmap2;
 #endif
-	static const rgb_t *last_palette;
+	static const rgb_t *last_palette2;
 	int i;
 
 #ifdef PINMAME
-	struct mame_bitmap *last_bitmap;
-	last_bitmap = last_debug_bitmap;
+	struct mame_bitmap *last_bitmap2;
+	last_bitmap2 = last_debug_bitmap2;
 #endif
 
 	// if no bitmap, use the last one we got
 	if (bitmap == NULL)
-		bitmap = last_bitmap;
+		bitmap = last_bitmap2;
 	if (palette == NULL)
-		palette = last_palette;
+		palette = last_palette2;
 
 	// if no bitmap, just fill
-	if (bitmap == NULL || palette == NULL || !debug_focus || bitmap->depth != 8)
+	// if (bitmap == NULL || palette == NULL || !debug_focus || bitmap->depth != 8)
+	if (bitmap == NULL || palette == NULL || !debug_focus)
 	{
 		RECT fill;
 		GetClientRect(win_debug_window2, &fill);
 		FillRect(dc, &fill, (HBRUSH)GetStockObject(BLACK_BRUSH));
 		return;
 	}
-	last_bitmap = bitmap;
-	last_palette = palette;
+	last_bitmap2 = bitmap;
+	last_palette2 = palette;
 
 	// if we're iconic, don't bother
 	if (IsIconic(win_debug_window2))
 		return;
+
+	// // HDRAWDIB hdd2 = DrawDibOpen();
+	// DrawDibBegin(hdd2, dc,
+	// 	bitmap->width, bitmap->height,
+	// 	0,
+	// 	bitmap->width, bitmap->height,
+	// 	0
+	// );
 
 	// for 8bpp bitmaps, update the debug colors
 	for (i = 0; i < DEBUGGER_TOTAL_COLORS; i++)
@@ -2024,10 +2057,14 @@ static void draw_debug_contents2(HDC dc, struct mame_bitmap *bitmap, const rgb_t
 		// Note that GCC may throw an array-bounds error on these lines, since the
 		// BITMAPINFO structure defines bmiColors as a single-element array.  Its
 		// size actually varies depending on settings in the header.
-		debug_dib_info2->bmiColors[i].rgbRed		= RGB_RED(palette[i]);
+		debug_dib_info2->bmiColors[i].rgbRed	= RGB_RED(palette[i]);
 		debug_dib_info2->bmiColors[i].rgbGreen	= RGB_GREEN(palette[i]);
 		debug_dib_info2->bmiColors[i].rgbBlue	= RGB_BLUE(palette[i]);
 	}
+
+	// debug_dib_info2->bmiColors[0].rgbRed   = 0xff << 16;
+	// debug_dib_info2->bmiColors[0].rgbGreen = 0xff << 8;
+	// debug_dib_info2->bmiColors[0].rgbBlue  = 0xff;
 
 	// fill in bitmap-specific info
 	debug_dib_info2->bmiHeader.biWidth = (LONG)(((UINT8 *)bitmap->line[1]) - ((UINT8 *)bitmap->line[0])) / (bitmap->depth / 8);
@@ -2035,9 +2072,10 @@ static void draw_debug_contents2(HDC dc, struct mame_bitmap *bitmap, const rgb_t
 	debug_dib_info2->bmiHeader.biBitCount = bitmap->depth;
 
 	// blit to the screen
-	StretchDIBits(dc, 0, 0, bitmap->width, bitmap->height,
-			0, 0, bitmap->width, bitmap->height,
-			bitmap->base, debug_dib_info2, DIB_RGB_COLORS, SRCCOPY);
+	StretchDIBits(dc,
+		0, 0, bitmap->width, bitmap->height,
+		0, 0, bitmap->width, bitmap->height,
+		bitmap->base, debug_dib_info2, DIB_RGB_COLORS, SRCCOPY);
 }
 
 
@@ -2167,18 +2205,17 @@ void win_set_debugger_focus(int focus)
 		throttle      = 1;
 
 		// show and restore the window
+		if (win_debug_window2)
+		{
+			ShowWindow(win_debug_window2, SW_SHOW);
+			ShowWindow(win_debug_window2, SW_RESTORE);
+		}
+
 		ShowWindow(win_debug_window, SW_SHOW);
 		ShowWindow(win_debug_window, SW_RESTORE);
 
 		// make frontmost
 		SetForegroundWindow(win_debug_window);
-
-		if (win_debug_window2)
-		{
-			ShowWindow(win_debug_window2, SW_SHOW);
-			ShowWindow(win_debug_window2, SW_RESTORE);
-			SetForegroundWindow(win_debug_window2);
-		}
 
 		// force an update
 		win_update_debug_window(NULL, NULL);
