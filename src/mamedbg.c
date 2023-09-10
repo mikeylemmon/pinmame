@@ -1526,27 +1526,29 @@ void d2_draw(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
 
 void d2_draw_x2(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
 	struct mame_bitmap *bm = Machine->debug_bitmap2;
-	UINT32* ll = (UINT32*)bm->line[yy*2];
 	UINT32 vv = (rr << 16) + (gg << 8) + bb;
-	ll[xx*2] = vv;
-	ll[xx*2+1] = vv;
+	UINT32* ll = (UINT32*)bm->line[yy*2];
+	unsigned idx = xx * 2;
+	ll[idx] = vv;
+	ll[idx+1] = vv;
 	ll = (UINT32*)bm->line[yy*2+1];
-	ll[xx*2] = vv;
-	ll[xx*2+1] = vv;
+	ll[idx] = vv;
+	ll[idx+1] = vv;
 }
 
-void d2_draw_pc(unsigned pc, UINT8 active) {
-	unsigned pp = pc - 0x8000;
-	unsigned xx = pp & 0b111111;
-	unsigned yy = pp >> 6;
+void d2_draw_pc(unsigned opc, UINT8 active) {
+	unsigned xx = opc & 0b111111;
+	unsigned yy = opc >> 6;
+	UINT32 count = d2_data->pc[opc];
+	if (!count) {
+		d2_draw_x2(xx, yy, 0x10, 0x10, 0x10);
+		return;
+	}
 	if (active) {
 		d2_draw_x2(xx, yy, 0x20, 0xff, 0xa0);
 		return;
 	}
-	UINT32 count = d2_data->pc[pp];
-	if (!count) {
-		d2_draw_x2(xx, yy, 0x10, 0x10, 0x10);
-	} else if (count < 7) {
+	if (count < 7) {
 		UINT8 rr = (count & 0b100) ? 0x60 : 0;
 		UINT8 gg = (count & 0b010) ? 0x60 : 0;
 		UINT8 bb = (count & 0b001) ? 0x60 : 0;
@@ -1561,14 +1563,51 @@ void d2_draw_pc(unsigned pc, UINT8 active) {
 
 void d2_draw_pc_all(void) {
 	for (unsigned pc = 0x8000; pc <= 0xffff; ++pc) {
-		d2_draw_pc(pc, 0);
+		d2_draw_pc(pc - 0x8000, 0);
 	}
 }
+
+static char d2_dasm[127+1];
+static void d2_pc_hit(unsigned pc) {
+	static unsigned lpc = 0x8000;
+	static unsigned lpc_ww = 1;
+	unsigned pc_next = pc + activecpu_dasm(d2_dasm, pc);
+	unsigned ww = pc_next - pc;
+	unsigned opc = pc - 0x8000;
+	UINT8 draw_all = 0;
+
+	if (pc < 0x8000) {
+		return;
+	}
+
+	for (unsigned ii = 0; ii < ww; ++ii) {
+		unsigned idx = opc + ii;
+		d2_data->pc[idx] += 1;
+		UINT32 vv = d2_data->pc[idx];
+		if (vv > d2_data->pc_max) {
+			d2_data->pc_max = vv + 0xffff;
+			printf("New max: %x -> %x\n", pc, d2_data->pc_max);
+			draw_all = 1;
+		} else {
+			for (unsigned jj = 0; jj < lpc_ww; ++jj) {
+				d2_draw_pc(lpc+jj, 0);
+			}
+		}
+		if (draw_all) {
+			d2_draw_pc_all();
+		}
+		for (unsigned jj = 0; jj < ww; ++jj) {
+			d2_draw_pc(opc+jj, 1);
+		}
+	}
+	lpc = opc;
+	lpc_ww = ww;
+}
+
 
 static void debug2_update(void)
 {
 	struct mame_bitmap *bm = Machine->debug_bitmap2;
-
 	static int d2_first = 1;
 	if (d2_first) {
 		d2_first = 0;
@@ -1578,71 +1617,9 @@ static void debug2_update(void)
 	}
 
 	unsigned pc = activecpu_get_pc();
-	static unsigned lpc = 0x8000;
-	if (pc < 0x8000) {
-		return;
-	}
-	d2_data->pc[pc-0x8000] += 1;
-	UINT32 vv = d2_data->pc[pc-0x8000];
-	if (vv > d2_data->pc_max) {
-		d2_data->pc_max = vv + 0xffff;
-		printf("New max: %x -> %x\n", pc, d2_data->pc_max);
-		d2_draw_pc_all();
-	} else {
-		d2_draw_pc(lpc, 0);
-	}
-	d2_draw_pc(pc, 1);
+	d2_pc_hit(pc);
 
-	lpc = pc;
 	debugger_bitmap_changed = 1;
-
-	// static int d2_first2 = 1;
-	// if (d2_first2) {
-	// 	d2_first2 = 0;
-	// 	UINT32 ii = 0;
-	// 	UINT32 size = bm->height * bm->width;
-	// 	for (unsigned kk = 0; kk < bm->height; ++kk) {
-	// 		for (unsigned jj = 0; jj < bm->width; ++jj) {
-	// 			UINT8 ss = (UINT8)((jj * 256 / bm->width) & 0xff);
-	// 			UINT8 tt = (UINT8)((kk * 256 / bm->height) & 0xff);
-	// 			// UINT8 zz = (UINT8)(ii >> 11);
-	// 			UINT8 zz = 0;
-	// 			d2_draw(jj, kk, ss, tt, zz);
-	// 		}
-	// 	}
-	// }
-
-	// unsigned yy = pc >> 6;
-	// unsigned xx = pc & 0b111111;
-
-	// unsigned yy = pc >> 8;
-	// unsigned xx = pc & 0xff;
-
-	// if (xx != xx_last || yy != yy_last) {
-	// 	printf("%x -> %x, %x (%d, %d)\n", pc, xx, yy, xx, yy);
-	// }
-	// xx_last = xx;
-	// yy_last = yy;
-
-
-	// if (bm->depth == 32) {
-	// 	UINT32* ll = (UINT32*)bm->line[yy];
-	// 	if (!ll[xx]) {
-	// 		ll[xx] = 0xff0000;
-	// 	}
-	// 	else {
-	// 		ll[xx] += 1;
-	// 	}
-	// }
-	// else if (bm->depth == 16) {
-	// 	UINT16* ll = (UINT16*)bm->line[yy];
-	// 	ll[xx]++;
-	// }
-	// else {
-	// 	UINT8* ll = (UINT8*)bm->line[yy];
-	// 	ll[xx]++;
-	// }
-	// debugger_bitmap_changed = 1;
 }
 
 /**************************************************************************
