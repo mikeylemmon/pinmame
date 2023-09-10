@@ -197,8 +197,16 @@ int m6800_ICount=50000;
 static UINT32 timer_next;
 
 /* DS -- THESE ARE RE-DEFINED IN m6800.h TO RAM, ROM or FUNCTIONS IN cpuintrf.c */
-#define RM				M6800_RDMEM
-#define WM				M6800_WRMEM
+#define RM_OLD			M6800_RDMEM
+#define WM_OLD			M6800_WRMEM
+static unsigned RM(offs_t addr) {
+	dbg2_op(D2_RM, addr);
+	return M6800_RDMEM(addr);
+}
+static void WM(offs_t addr, data8_t data) {
+	dbg2_op(D2_WM, addr);
+	return M6800_WRMEM(addr, data);
+}
 #define M_RDOP			M6800_RDOP
 #define M_RDOP_ARG		M6800_RDOP_ARG
 

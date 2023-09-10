@@ -1513,18 +1513,25 @@ static void trace_select( void )
 typedef struct {
 	UINT32 pc[0x8000];
 	UINT32 pc_max;
+	UINT32 rm[0x10000];
+	UINT32 rm_max;
+	UINT32 wm[0x10000];
+	UINT32 wm_max;
 } s_debug2;
 
 s_debug2 d2_data_bytes;
 s_debug2* d2_data = &d2_data_bytes;
 
-void d2_draw(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
+UINT8 d2_ignore_ops = 1;
+
+static void d2_draw(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
+	printf("Drawing 0x%02x%02x%02x to (%d,%d)\n", rr, gg, bb, xx, yy);
 	struct mame_bitmap *bm = Machine->debug_bitmap2;
 	UINT32* ll = (UINT32*)bm->line[yy];
 	ll[xx] = (rr << 16) + (gg << 8) + bb;
 }
 
-void d2_draw_x2(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
+static void d2_draw_x2(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
 	struct mame_bitmap *bm = Machine->debug_bitmap2;
 	UINT32 vv = (rr << 16) + (gg << 8) + bb;
 	UINT32* ll = (UINT32*)bm->line[yy*2];
@@ -1536,7 +1543,86 @@ void d2_draw_x2(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
 	ll[idx+1] = vv;
 }
 
-void d2_draw_pc(unsigned opc, UINT8 active) {
+static void d2_draw_hit(UINT32* arr, unsigned idx, UINT32 max, unsigned off_x, UINT8 active, UINT8 x2) {
+	unsigned xx = idx & 0b111111;
+	unsigned yy = idx >> 6;
+	void (*draw)(unsigned, unsigned, UINT8, UINT8, UINT8) = d2_draw;
+	if (x2) {
+		xx = idx & 0b111111;
+		yy = idx >> 6;
+		draw = d2_draw_x2;
+	}
+	xx += off_x;
+	UINT32 count = arr[idx];
+	if (!count) {
+		draw(xx, yy, 0x10, 0x10, 0x10);
+		return;
+	}
+	if (active) {
+		draw(xx, yy, 0x20, 0xff, 0xa0);
+		return;
+	}
+	if (count < 7) {
+		UINT8 rr = (count & 0b100) ? 0x60 : 0;
+		UINT8 gg = (count & 0b010) ? 0x60 : 0;
+		UINT8 bb = (count & 0b001) ? 0x60 : 0;
+		draw(xx, yy, rr, gg, bb);
+	} else if (count < 0xfff) {
+		draw(xx, yy, 0, 0x90, count >> 4);
+	} else {
+		UINT8 val = (UINT8)((count * 0xff / max) & 0xff);
+		draw(xx, yy, 0xa0, val, val);
+	}
+}
+
+void dbg2_op(int op, unsigned addr) {
+	if (d2_ignore_ops) {
+		return;
+	}
+	// printf("dbg2_op: %d: %x\n", op, addr);
+
+	static int _db2_op_first = 1;
+	if (_db2_op_first) {
+		_db2_op_first = 0;
+		memset(d2_data->rm, 0, 0x10000);
+		memset(d2_data->wm, 0, 0x10000);
+		d2_data->rm_max = 0xfff;
+		d2_data->wm_max = 0xfff;
+	}
+
+	UINT32* arr = NULL;
+	UINT32* max = NULL;
+	unsigned off_x = (2 << 6);
+	switch (op) {
+	case D2_RM: {
+		arr = d2_data->rm;
+		max = &d2_data->rm_max;
+		break;
+	}
+	case D2_WM:
+		arr = d2_data->wm;
+		max = &d2_data->wm_max;
+		off_x += 1 << 6;
+		break;
+	default:
+		printf("Unsupported dbg2 op: %d\n", op);
+		return;
+	}
+
+	UINT32 val = ++arr[addr];
+	if (val > *max) {
+		*max = val + 0xfff;
+		printf("[dbg2] New max (op=%d): %x -> %x\n", op, addr, val);
+	}
+
+	// printf("dbg2_op: %d: %x -- drawing...\n", op, addr);
+	d2_draw_hit(arr, addr, *max, off_x, 0, 0);
+
+	// printf("dbg2_op: %d: %x -- ...drew\n", op, addr);
+	debugger_bitmap_changed = 1;
+}
+
+static void d2_draw_pc(unsigned opc, UINT8 active) {
 	unsigned xx = opc & 0b111111;
 	unsigned yy = opc >> 6;
 	UINT32 count = d2_data->pc[opc];
@@ -1561,13 +1647,13 @@ void d2_draw_pc(unsigned opc, UINT8 active) {
 	}
 }
 
-void d2_draw_pc_all(void) {
+static void d2_draw_pc_all(void) {
 	for (unsigned pc = 0x8000; pc <= 0xffff; ++pc) {
 		d2_draw_pc(pc - 0x8000, 0);
 	}
 }
 
-static char d2_dasm[127+1];
+char d2_dasm[127+1];
 static void d2_pc_hit(unsigned pc) {
 	static unsigned lpc = 0x8000;
 	static unsigned lpc_ww = 1;
@@ -1603,7 +1689,6 @@ static void d2_pc_hit(unsigned pc) {
 	lpc = opc;
 	lpc_ww = ww;
 }
-
 
 static void debug2_update(void)
 {
@@ -5466,6 +5551,7 @@ void mame_debug_exit(void)
  **************************************************************************/
 void MAME_Debug(void)
 {
+	d2_ignore_ops = 1;
 	if( ++debug_key_delay == 0x7fff )
 	{
 		debug_key_delay = 0;
@@ -5651,6 +5737,9 @@ void MAME_Debug(void)
 		memcpy( DBGREGS.backup,
 				DBGREGS.newval, DBGREGS.count * sizeof(UINT32) );
 	}
+
+mame_debug_end:
+	d2_ignore_ops = 0;
 }
 
 #ifdef PINMAME

@@ -99,6 +99,12 @@ enum {
  ***************************************************************************/
 extern const char *set_ea_info( int what, unsigned address, int size, int acc );
 
+enum {
+    D2_RM,
+    D2_WM,
+};
+extern void dbg2_op(int op, unsigned addr);
+
 /* Startup and shutdown functions; called from cpu_run */
 extern void mame_debug_init(void);
 extern void mame_debug_exit(void);
