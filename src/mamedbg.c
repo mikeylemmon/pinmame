@@ -1525,7 +1525,7 @@ s_debug2* d2_data = &d2_data_bytes;
 UINT8 d2_ignore_ops = 1;
 
 static void d2_draw(unsigned xx, unsigned yy, UINT8 rr, UINT8 gg, UINT8 bb) {
-	printf("Drawing 0x%02x%02x%02x to (%d,%d)\n", rr, gg, bb, xx, yy);
+	// printf("Drawing 0x%02x%02x%02x to (%d,%d)\n", rr, gg, bb, xx, yy);
 	struct mame_bitmap *bm = Machine->debug_bitmap2;
 	UINT32* ll = (UINT32*)bm->line[yy];
 	ll[xx] = (rr << 16) + (gg << 8) + bb;
